@@ -1,0 +1,1828 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Timelines MVP</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #f6f7f8;
+        --paper: #ffffff;
+        --ink: #111318;
+        --muted: #69707d;
+        --line: #d7dbe2;
+        --line-strong: #17191d;
+        --header: #050506;
+        --post: #a8caea;
+        --post-strong: #78addc;
+        --accent: #0f8f72;
+        --danger: #bf3b3b;
+        --composer: #eef2f5;
+        --shadow: 0 -10px 28px rgba(17, 19, 24, 0.08);
+        --time-col: 72px;
+        --row-h: 40px;
+        --head-h: 32px;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        background: var(--bg);
+        color: var(--ink);
+        font-family:
+          Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+          "Segoe UI", sans-serif;
+      }
+
+      button,
+      input,
+      select,
+      textarea {
+        font: inherit;
+      }
+
+      button {
+        cursor: pointer;
+      }
+
+      .app {
+        min-height: 100vh;
+        display: grid;
+        grid-template-rows: auto 1fr auto;
+      }
+
+      .topbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 18px;
+        padding: 14px 18px 12px;
+        background: var(--paper);
+        border-bottom: 1px solid var(--line);
+      }
+
+      .brand {
+        display: flex;
+        align-items: baseline;
+        gap: 12px;
+        min-width: 0;
+      }
+
+      h1 {
+        margin: 0;
+        font-size: 20px;
+        line-height: 1.1;
+        letter-spacing: 0;
+      }
+
+      .window-label {
+        color: var(--muted);
+        font-size: 13px;
+        white-space: nowrap;
+      }
+
+      .toolbar {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .tool-button,
+      .auth-button,
+      .submit-button,
+      .load-button,
+      .dialog-button {
+        border: 1px solid var(--line-strong);
+        background: var(--paper);
+        color: var(--ink);
+        min-height: 34px;
+      }
+
+      .tool-button {
+        width: 36px;
+        height: 34px;
+        display: grid;
+        place-items: center;
+        font-size: 18px;
+        line-height: 1;
+      }
+
+      .tool-button:hover,
+      .submit-button:hover,
+      .load-button:hover,
+      .dialog-button:hover {
+        background: #edf3f1;
+      }
+
+      .tool-button.primary {
+        background: var(--header);
+        color: #fff;
+      }
+
+      .auth-button {
+        min-width: 86px;
+        height: 34px;
+        padding: 0 10px;
+        font-size: 12px;
+        font-weight: 700;
+        white-space: nowrap;
+      }
+
+      .auth-button.signed-in {
+        border-color: var(--accent);
+        background: #e8f5f1;
+        color: #0c604e;
+      }
+
+      .timeline-wrap {
+        min-height: 0;
+        padding: 14px 18px 0;
+      }
+
+      .timeline-scroll {
+        height: calc(100vh - 188px);
+        min-height: 360px;
+        overflow: auto;
+        background: var(--paper);
+        border: 1px solid var(--line-strong);
+      }
+
+      .timeline-grid {
+        display: grid;
+        grid-template-columns:
+          var(--time-col)
+          repeat(var(--account-count), minmax(0, 1fr));
+        width: 100%;
+        min-width: 0;
+      }
+
+      .corner,
+      .account-head {
+        position: sticky;
+        top: 0;
+        z-index: 3;
+        min-width: 0;
+        height: var(--head-h);
+        display: grid;
+        place-items: center;
+        background: var(--header);
+        color: #fff;
+        border-right: 1px solid #70737a;
+        border-bottom: 1px solid var(--line-strong);
+        font-size: 12px;
+        font-weight: 700;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        padding: 0 8px;
+      }
+
+      .corner {
+        left: 0;
+        z-index: 4;
+      }
+
+      .account-head {
+        display: block;
+        line-height: var(--head-h);
+        text-align: center;
+      }
+
+      .time-cell {
+        position: sticky;
+        left: 0;
+        z-index: 2;
+        min-width: var(--time-col);
+        height: var(--row-h);
+        display: grid;
+        place-items: center;
+        background: var(--header);
+        color: #fff;
+        border-right: 1px solid #70737a;
+        border-bottom: 1px solid #fff;
+        font-size: 13px;
+        font-variant-numeric: tabular-nums;
+      }
+
+      .time-cell.current {
+        outline: 2px solid var(--accent);
+        outline-offset: -2px;
+      }
+
+      .slot {
+        height: var(--row-h);
+        min-width: 0;
+        border-bottom: 1px solid var(--line-strong);
+        border-right: 1px solid var(--line);
+        padding: 3px 6px;
+        background: #fff;
+      }
+
+      .slot.current {
+        background: #fbfefc;
+      }
+
+      .post-stack {
+        width: 100%;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        overflow: hidden;
+      }
+
+      .post-stack.crowded {
+        gap: 1px;
+      }
+
+      .post-card {
+        width: 100%;
+        min-width: 0;
+        height: 32px;
+        display: block;
+        padding: 0 10px;
+        background: var(--post);
+        border-left: 3px solid var(--post-strong);
+        color: #101820;
+        font-size: 12px;
+        line-height: 32px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        cursor: pointer;
+      }
+
+      .post-card:hover,
+      .post-card:focus-visible,
+      .post-more:hover,
+      .post-more:focus-visible {
+        outline: 2px solid #111318;
+        outline-offset: -2px;
+      }
+
+      .post-card.mine {
+        background: #c4ddef;
+        border-left-color: var(--accent);
+      }
+
+      .post-card.compact {
+        height: 16px;
+        padding: 0 7px;
+        font-size: 11px;
+        line-height: 16px;
+      }
+
+      .post-card.crowded {
+        height: 12px;
+        padding: 0 6px;
+        font-size: 10px;
+        line-height: 12px;
+      }
+
+      .post-more {
+        height: 14px;
+        padding: 0 7px;
+        display: flex;
+        align-items: center;
+        color: var(--muted);
+        background: #e7edf3;
+        border-left: 3px solid #aeb9c5;
+        font-size: 11px;
+        white-space: nowrap;
+        cursor: pointer;
+      }
+
+      .post-more.crowded {
+        height: 8px;
+        padding: 0 6px;
+        font-size: 9px;
+      }
+
+      .post-popover {
+        position: fixed;
+        z-index: 20;
+        width: min(360px, calc(100vw - 24px));
+        max-height: min(360px, calc(100vh - 24px));
+        display: none;
+        overflow: auto;
+        border: 1px solid var(--line-strong);
+        background: #fff;
+        box-shadow: 0 16px 38px rgba(17, 19, 24, 0.22);
+      }
+
+      .post-popover.is-open {
+        display: block;
+      }
+
+      .popover-head {
+        display: flex;
+        align-items: start;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 10px 12px 8px;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .popover-title {
+        min-width: 0;
+        font-size: 13px;
+        font-weight: 700;
+        line-height: 1.35;
+      }
+
+      .popover-meta {
+        margin-top: 3px;
+        color: var(--muted);
+        font-size: 11px;
+        font-weight: 400;
+        line-height: 1.4;
+        word-break: break-word;
+      }
+
+      .popover-close {
+        width: 28px;
+        height: 28px;
+        flex: 0 0 auto;
+        border: 1px solid var(--line);
+        background: #fff;
+        color: var(--ink);
+        line-height: 1;
+      }
+
+      .popover-body {
+        padding: 11px 12px 12px;
+        font-size: 13px;
+        line-height: 1.55;
+        white-space: pre-wrap;
+        overflow-wrap: anywhere;
+      }
+
+      .popover-list {
+        display: grid;
+        gap: 10px;
+      }
+
+      .popover-item {
+        padding-bottom: 10px;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .popover-item:last-child {
+        padding-bottom: 0;
+        border-bottom: 0;
+      }
+
+      .popover-item-time {
+        margin-bottom: 3px;
+        color: var(--muted);
+        font-size: 11px;
+      }
+
+      .load-bar {
+        width: 100%;
+        min-width: 0;
+        display: flex;
+        justify-content: center;
+        padding: 12px;
+        background: #fff;
+      }
+
+      .load-button {
+        padding: 0 16px;
+        min-width: 128px;
+      }
+
+      .composer {
+        background: var(--composer);
+        border-top: 1px solid var(--line);
+        box-shadow: var(--shadow);
+        padding: 12px 18px;
+      }
+
+      .compose-grid {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 10px;
+        align-items: end;
+      }
+
+      .compose-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 6px;
+      }
+
+      .compose-target {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .compose-target select,
+      .dialog-body input,
+      .dialog-body select {
+        min-height: 32px;
+        border: 1px solid var(--line);
+        background: #fff;
+        color: var(--ink);
+        padding: 0 9px;
+      }
+
+      .char-count {
+        color: var(--muted);
+        font-size: 12px;
+        font-variant-numeric: tabular-nums;
+      }
+
+      .char-count.over {
+        color: var(--danger);
+        font-weight: 700;
+      }
+
+      textarea {
+        width: 100%;
+        height: 52px;
+        resize: none;
+        border: 1px solid var(--line-strong);
+        padding: 9px 10px;
+        background: #fff;
+        color: var(--ink);
+        line-height: 1.45;
+      }
+
+      .submit-button {
+        height: 52px;
+        min-width: 92px;
+        padding: 0 18px;
+        background: var(--header);
+        color: #fff;
+        font-weight: 700;
+      }
+
+      .submit-button:disabled {
+        cursor: not-allowed;
+        border-color: var(--line);
+        background: #aeb4bb;
+        color: #f6f7f8;
+      }
+
+      dialog {
+        width: min(420px, calc(100vw - 32px));
+        border: 1px solid var(--line-strong);
+        padding: 0;
+        background: #fff;
+        color: var(--ink);
+      }
+
+      dialog::backdrop {
+        background: rgba(10, 12, 16, 0.38);
+      }
+
+      .dialog-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 12px 14px;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .dialog-title {
+        font-weight: 700;
+      }
+
+      .dialog-close {
+        width: 30px;
+        height: 30px;
+      }
+
+      .dialog-body {
+        display: grid;
+        gap: 12px;
+        padding: 14px;
+      }
+
+      .field {
+        display: grid;
+        gap: 6px;
+      }
+
+      .field label {
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .field-note,
+      .dialog-message {
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.45;
+      }
+
+      .dialog-message.error {
+        color: var(--danger);
+      }
+
+      .dialog-message.success {
+        color: var(--accent);
+      }
+
+      .checkbox-field {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .checkbox-field input {
+        width: 15px;
+        height: 15px;
+      }
+
+      .dialog-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 8px;
+        padding: 0 14px 14px;
+      }
+
+      .dialog-button {
+        padding: 0 14px;
+      }
+
+      .dialog-button.primary {
+        background: var(--header);
+        color: #fff;
+      }
+
+      @media (max-width: 760px) {
+        :root {
+          --time-col: 62px;
+          --row-h: 38px;
+        }
+
+        .topbar {
+          align-items: flex-start;
+          flex-direction: column;
+          padding: 12px;
+        }
+
+        .toolbar {
+          width: 100%;
+          justify-content: flex-end;
+          flex-wrap: wrap;
+        }
+
+        .timeline-wrap {
+          padding: 10px 10px 0;
+        }
+
+        .timeline-scroll {
+          height: calc(100vh - 220px);
+          min-height: 330px;
+        }
+
+        .compose-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .submit-button {
+          width: 100%;
+          height: 42px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="app">
+      <header class="topbar">
+        <div class="brand">
+          <h1>Timelines</h1>
+          <div class="window-label" id="windowLabel"></div>
+        </div>
+        <div class="toolbar" aria-label="タイムライン操作">
+          <button
+            class="tool-button"
+            id="jumpNow"
+            type="button"
+            title="現在時刻へ戻る"
+            aria-label="現在時刻へ戻る"
+          >
+            ↑
+          </button>
+          <button
+            class="tool-button"
+            id="refreshNow"
+            type="button"
+            title="今すぐロード"
+            aria-label="今すぐロード"
+          >
+            ↻
+          </button>
+          <button
+            class="auth-button"
+            id="authButton"
+            type="button"
+            title="Blueskyアカウント認証"
+            aria-label="Blueskyアカウント認証"
+          >
+            未認証
+          </button>
+          <button
+            class="tool-button primary"
+            id="addAccountButton"
+            type="button"
+            title="表示アカウントを追加"
+            aria-label="表示アカウントを追加"
+          >
+            +
+          </button>
+        </div>
+      </header>
+
+      <section class="timeline-wrap" aria-label="時刻表タイムライン">
+        <div class="timeline-scroll" id="timelineScroll">
+          <div class="timeline-grid" id="timelineGrid"></div>
+          <div class="load-bar" id="loadBar">
+            <button class="load-button" id="loadMore" type="button">
+              さらにロード
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <form class="composer" id="composeForm">
+        <div class="compose-row">
+          <div class="compose-target">
+            <span>投稿先</span>
+            <select id="composeTarget" aria-label="投稿先アカウント"></select>
+          </div>
+          <div class="char-count" id="charCount">0 / 300</div>
+        </div>
+        <div class="compose-grid">
+          <textarea
+            id="composeText"
+            maxlength="500"
+            placeholder="いま投稿する内容"
+            aria-label="投稿内容"
+          ></textarea>
+          <button class="submit-button" id="submitPost" type="submit" disabled>
+            投稿
+          </button>
+        </div>
+      </form>
+    </main>
+
+    <aside
+      class="post-popover"
+      id="postPopover"
+      role="dialog"
+      aria-modal="false"
+      aria-live="polite"
+      aria-label="投稿全文"
+    ></aside>
+
+    <dialog id="authDialog" aria-labelledby="authDialogTitle">
+      <form method="dialog" id="authForm">
+        <div class="dialog-head">
+          <div class="dialog-title" id="authDialogTitle">Bluesky 認証</div>
+          <button
+            class="tool-button dialog-close"
+            id="closeAuthDialog"
+            type="button"
+            title="閉じる"
+            aria-label="閉じる"
+          >
+            ×
+          </button>
+        </div>
+        <div class="dialog-body">
+          <div class="field">
+            <label for="authHandle">ハンドルまたはメール</label>
+            <input
+              id="authHandle"
+              type="text"
+              autocomplete="username"
+              placeholder="例: yourname.bsky.social"
+              required
+            />
+          </div>
+          <div class="field">
+            <label for="authPassword">Bluesky app password</label>
+            <input
+              id="authPassword"
+              type="password"
+              autocomplete="current-password"
+              placeholder="Blueskyで作成したapp password"
+              required
+            />
+            <div class="field-note">
+              通常パスワードではなく、Blueskyのapp passwordを推奨します。
+            </div>
+          </div>
+          <div class="field">
+            <label for="authService">PDS</label>
+            <input id="authService" type="url" value="https://bsky.social" required />
+          </div>
+          <label class="checkbox-field">
+            <input id="authRemember" type="checkbox" checked />
+            このブラウザにログイン状態を保存
+          </label>
+          <div class="dialog-message" id="authMessage"></div>
+        </div>
+        <div class="dialog-actions">
+          <button class="dialog-button" id="logoutButton" type="button">
+            ログアウト
+          </button>
+          <button class="dialog-button" id="cancelAuth" type="button">
+            キャンセル
+          </button>
+          <button class="dialog-button primary" id="saveAuth" type="submit">
+            認証
+          </button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="accountDialog" aria-labelledby="accountDialogTitle">
+      <form method="dialog">
+        <div class="dialog-head">
+          <div class="dialog-title" id="accountDialogTitle">表示アカウントを追加</div>
+          <button
+            class="tool-button dialog-close"
+            id="closeAccountDialog"
+            type="button"
+            title="閉じる"
+            aria-label="閉じる"
+          >
+            ×
+          </button>
+        </div>
+        <div class="dialog-body">
+          <div class="field">
+            <label for="accountName">表示名</label>
+            <input id="accountName" type="text" placeholder="例: atproto" />
+          </div>
+          <div class="field">
+            <label for="accountHandle">ハンドル</label>
+            <input id="accountHandle" type="text" placeholder="例: bsky.app" required />
+            <div class="field-note">
+              Bluesky は公開プロフィールを取得して列に登録します。X はAPIキーが必要なため列登録のみです。
+            </div>
+          </div>
+          <div class="field">
+            <label for="accountProvider">プロバイダー</label>
+            <select id="accountProvider">
+              <option value="bluesky">Bluesky</option>
+              <option value="x">X / Twitter</option>
+            </select>
+          </div>
+        </div>
+        <div class="dialog-actions">
+          <button class="dialog-button" id="cancelAccount" type="button">
+            キャンセル
+          </button>
+          <button class="dialog-button primary" id="saveAccount" type="submit">
+            追加
+          </button>
+        </div>
+      </form>
+    </dialog>
+
+    <script>
+      const MAX_POST_LENGTH = 300;
+      const DEFAULT_WINDOW_MINUTES = 60;
+      const LOAD_STEP_MINUTES = 60;
+      const STORAGE_KEY = "timelines:v1";
+      const PUBLIC_BSKY_SERVICE = "https://public.api.bsky.app";
+      const DEFAULT_BSKY_SERVICE = "https://bsky.social";
+
+      const state = {
+        now: floorToMinute(new Date()),
+        windowMinutes: DEFAULT_WINDOW_MINUTES,
+        accounts: loadStoredAccounts(),
+        posts: loadStoredPosts(),
+        session: loadStoredSession(),
+        feedCursors: {},
+        lastSyncedAt: "",
+        syncMessage: "",
+        isLoading: false,
+      };
+
+      const els = {
+        grid: document.getElementById("timelineGrid"),
+        scroll: document.getElementById("timelineScroll"),
+        loadBar: document.getElementById("loadBar"),
+        loadMore: document.getElementById("loadMore"),
+        windowLabel: document.getElementById("windowLabel"),
+        jumpNow: document.getElementById("jumpNow"),
+        refreshNow: document.getElementById("refreshNow"),
+        authButton: document.getElementById("authButton"),
+        authDialog: document.getElementById("authDialog"),
+        authForm: document.getElementById("authForm"),
+        closeAuthDialog: document.getElementById("closeAuthDialog"),
+        cancelAuth: document.getElementById("cancelAuth"),
+        logoutButton: document.getElementById("logoutButton"),
+        saveAuth: document.getElementById("saveAuth"),
+        authHandle: document.getElementById("authHandle"),
+        authPassword: document.getElementById("authPassword"),
+        authService: document.getElementById("authService"),
+        authRemember: document.getElementById("authRemember"),
+        authMessage: document.getElementById("authMessage"),
+        addAccountButton: document.getElementById("addAccountButton"),
+        dialog: document.getElementById("accountDialog"),
+        closeDialog: document.getElementById("closeAccountDialog"),
+        cancelAccount: document.getElementById("cancelAccount"),
+        saveAccount: document.getElementById("saveAccount"),
+        accountName: document.getElementById("accountName"),
+        accountHandle: document.getElementById("accountHandle"),
+        accountProvider: document.getElementById("accountProvider"),
+        composeForm: document.getElementById("composeForm"),
+        composeText: document.getElementById("composeText"),
+        composeTarget: document.getElementById("composeTarget"),
+        submitPost: document.getElementById("submitPost"),
+        charCount: document.getElementById("charCount"),
+        postPopover: document.getElementById("postPopover"),
+      };
+
+      let popoverLocked = false;
+
+      ensureSelfAccount();
+      if (state.posts.length === 0) seedPosts();
+      render();
+      wireEvents();
+      startMinuteTicker();
+      loadLatestPosts({ silent: true });
+
+      function wireEvents() {
+        els.loadMore.addEventListener("click", async () => {
+          state.windowMinutes += LOAD_STEP_MINUTES;
+          render();
+          await loadOlderPosts();
+          render();
+        });
+
+        els.jumpNow.addEventListener("click", () => {
+          state.now = floorToMinute(new Date());
+          render();
+          els.scroll.scrollTop = 0;
+        });
+
+        els.refreshNow.addEventListener("click", async () => {
+          await loadLatestPosts({ silent: false });
+          els.scroll.scrollTop = 0;
+        });
+
+        els.authButton.addEventListener("click", () => {
+          els.authHandle.value = state.session?.handle || "";
+          els.authPassword.value = "";
+          els.authService.value = state.session?.service || DEFAULT_BSKY_SERVICE;
+          setAuthMessage("");
+          els.logoutButton.hidden = !state.session;
+          els.authDialog.showModal();
+          els.authHandle.focus();
+        });
+
+        els.closeAuthDialog.addEventListener("click", () => els.authDialog.close());
+        els.cancelAuth.addEventListener("click", () => els.authDialog.close());
+        els.logoutButton.addEventListener("click", () => {
+          logout();
+          els.authDialog.close();
+        });
+
+        els.addAccountButton.addEventListener("click", () => {
+          els.accountName.value = "";
+          els.accountHandle.value = "";
+          els.accountProvider.value = "bluesky";
+          els.dialog.showModal();
+          els.accountName.focus();
+        });
+
+        els.closeDialog.addEventListener("click", () => els.dialog.close());
+        els.cancelAccount.addEventListener("click", () => els.dialog.close());
+
+        els.saveAccount.addEventListener("click", async (event) => {
+          const form = els.dialog.querySelector("form");
+          if (!form.reportValidity()) {
+            event.preventDefault();
+            return;
+          }
+          event.preventDefault();
+          els.saveAccount.disabled = true;
+          try {
+            await addAccount({
+              displayName: els.accountName.value.trim(),
+              handle: els.accountHandle.value.trim(),
+              provider: els.accountProvider.value,
+            });
+            els.dialog.close();
+          } catch (error) {
+            alert(error.message || "アカウント追加に失敗しました。");
+          } finally {
+            els.saveAccount.disabled = false;
+          }
+        });
+
+        els.authForm.addEventListener("submit", async (event) => {
+          event.preventDefault();
+          if (!els.authForm.reportValidity()) return;
+          els.saveAuth.disabled = true;
+          setAuthMessage("認証しています...");
+          try {
+            await loginBluesky({
+              identifier: els.authHandle.value.trim(),
+              password: els.authPassword.value,
+              service: els.authService.value.trim() || DEFAULT_BSKY_SERVICE,
+              remember: els.authRemember.checked,
+            });
+            setAuthMessage("認証しました。", "success");
+            els.authPassword.value = "";
+            els.authDialog.close();
+          } catch (error) {
+            setAuthMessage(error.message || "認証に失敗しました。", "error");
+          } finally {
+            els.saveAuth.disabled = false;
+          }
+        });
+
+        els.composeText.addEventListener("input", updateComposerState);
+
+        els.composeForm.addEventListener("submit", async (event) => {
+          event.preventDefault();
+          const text = els.composeText.value.trim();
+          if (!text || text.length > MAX_POST_LENGTH) return;
+
+          const accountId = els.composeTarget.value || "self";
+          els.submitPost.disabled = true;
+          try {
+            await publishPost(accountId, text);
+            els.composeText.value = "";
+            updateComposerState();
+            state.now = floorToMinute(new Date());
+            render();
+            els.scroll.scrollTop = 0;
+          } catch (error) {
+            alert(error.message || "投稿に失敗しました。");
+            updateComposerState();
+          }
+        });
+
+        document.addEventListener("click", (event) => {
+          const target = event.target;
+          if (
+            !popoverLocked ||
+            !(target instanceof Element) ||
+            els.postPopover.contains(target) ||
+            target.closest(".post-card, .post-more")
+          ) {
+            return;
+          }
+          hidePostPopover();
+        });
+
+        document.addEventListener("keydown", (event) => {
+          if (event.key === "Escape") hidePostPopover();
+        });
+      }
+
+      function render() {
+        const minutes = buildMinutes(state.now, state.windowMinutes);
+        els.grid.style.setProperty("--account-count", state.accounts.length);
+
+        const postsByMinuteAndAccount = groupPosts(minutes);
+        const fragment = document.createDocumentFragment();
+
+        fragment.appendChild(cell("corner", ""));
+        for (const account of state.accounts) {
+          const head = cell("account-head", account.displayName);
+          head.title = `${account.displayName} / ${account.provider}: ${account.handle}`;
+          fragment.appendChild(head);
+        }
+
+        minutes.forEach((minute, index) => {
+          const minuteKey = toMinuteKey(minute);
+          const isCurrent = index === 0;
+          const time = cell(`time-cell${isCurrent ? " current" : ""}`, formatTime(minute));
+          fragment.appendChild(time);
+
+          for (const account of state.accounts) {
+            const slot = cell(`slot${isCurrent ? " current" : ""}`, "");
+            const posts =
+              postsByMinuteAndAccount.get(`${minuteKey}:${account.id}`) || [];
+            renderPosts(slot, posts, account);
+            fragment.appendChild(slot);
+          }
+        });
+
+        els.grid.replaceChildren(fragment);
+        els.windowLabel.textContent = `${formatTime(minutes[0])} から ${formatTime(
+          minutes[minutes.length - 1],
+        )} まで / ${state.windowMinutes}分${state.syncMessage ? ` / ${state.syncMessage}` : ""}`;
+        renderComposeTargets();
+        renderAuthStatus();
+        updateComposerState();
+      }
+
+      function renderPosts(slot, posts, account) {
+        if (posts.length === 0) return;
+
+        const stack = document.createElement("div");
+        stack.className = `post-stack${posts.length > 2 ? " crowded" : ""}`;
+
+        const visiblePosts = posts.slice(0, posts.length > 1 ? 2 : 1);
+        const compact = posts.length > 1;
+        const crowded = posts.length > 2;
+
+        for (const post of visiblePosts) {
+          const card = document.createElement("div");
+          card.className = `post-card${account.mine ? " mine" : ""}${
+            compact ? " compact" : ""
+          }${crowded ? " crowded" : ""
+          }`;
+          card.textContent = post.preview;
+          card.tabIndex = 0;
+          card.setAttribute("role", "button");
+          card.setAttribute("aria-label", `${account.displayName}の投稿全文を表示`);
+          card.addEventListener("mouseenter", () => {
+            if (!popoverLocked) showPostPopover(card, post, account, false);
+          });
+          card.addEventListener("mouseleave", () => {
+            if (!popoverLocked) hidePostPopover();
+          });
+          card.addEventListener("focus", () => {
+            if (!popoverLocked) showPostPopover(card, post, account, false);
+          });
+          card.addEventListener("blur", () => {
+            if (!popoverLocked) hidePostPopover();
+          });
+          card.addEventListener("click", (event) => {
+            event.stopPropagation();
+            showPostPopover(card, post, account, true);
+          });
+          card.addEventListener("keydown", (event) => {
+            if (event.key !== "Enter" && event.key !== " ") return;
+            event.preventDefault();
+            showPostPopover(card, post, account, true);
+          });
+          stack.appendChild(card);
+        }
+
+        if (posts.length > visiblePosts.length) {
+          const more = document.createElement("div");
+          more.className = `post-more${crowded ? " crowded" : ""}`;
+          more.textContent = `+${posts.length - visiblePosts.length}`;
+          more.tabIndex = 0;
+          more.setAttribute("role", "button");
+          more.setAttribute(
+            "aria-label",
+            `${account.displayName}の隠れている投稿を表示`,
+          );
+          const hiddenPosts = posts.slice(visiblePosts.length);
+          more.addEventListener("mouseenter", () => {
+            if (!popoverLocked) showPostListPopover(more, hiddenPosts, account, false);
+          });
+          more.addEventListener("mouseleave", () => {
+            if (!popoverLocked) hidePostPopover();
+          });
+          more.addEventListener("focus", () => {
+            if (!popoverLocked) showPostListPopover(more, hiddenPosts, account, false);
+          });
+          more.addEventListener("blur", () => {
+            if (!popoverLocked) hidePostPopover();
+          });
+          more.addEventListener("click", (event) => {
+            event.stopPropagation();
+            showPostListPopover(more, hiddenPosts, account, true);
+          });
+          more.addEventListener("keydown", (event) => {
+            if (event.key !== "Enter" && event.key !== " ") return;
+            event.preventDefault();
+            showPostListPopover(more, hiddenPosts, account, true);
+          });
+          stack.appendChild(more);
+        }
+
+        slot.appendChild(stack);
+      }
+
+      function showPostPopover(anchor, post, account, lock) {
+        popoverLocked = lock;
+        els.postPopover.replaceChildren(
+          buildPopoverHead(account, post.createdAt, lock),
+          buildTextBody(post.text),
+        );
+        placePopover(anchor);
+      }
+
+      function showPostListPopover(anchor, posts, account, lock) {
+        popoverLocked = lock;
+
+        const body = document.createElement("div");
+        body.className = "popover-body popover-list";
+
+        for (const post of posts) {
+          const item = document.createElement("div");
+          item.className = "popover-item";
+
+          const time = document.createElement("div");
+          time.className = "popover-item-time";
+          time.textContent = formatTime(post.createdAt);
+
+          const text = document.createElement("div");
+          text.textContent = post.text;
+
+          item.append(time, text);
+          body.appendChild(item);
+        }
+
+        els.postPopover.replaceChildren(
+          buildPopoverHead(account, posts[0].createdAt, lock, `${posts.length}件の投稿`),
+          body,
+        );
+        placePopover(anchor);
+      }
+
+      function buildPopoverHead(account, createdAt, locked, titleSuffix = "") {
+        const head = document.createElement("div");
+        head.className = "popover-head";
+
+        const title = document.createElement("div");
+        title.className = "popover-title";
+        title.textContent = titleSuffix
+          ? `${account.displayName} / ${titleSuffix}`
+          : account.displayName;
+
+        const meta = document.createElement("div");
+        meta.className = "popover-meta";
+        meta.textContent = `${account.provider}: ${account.handle} / ${formatTime(
+          createdAt,
+        )}`;
+        title.appendChild(meta);
+
+        const close = document.createElement("button");
+        close.className = "popover-close";
+        close.type = "button";
+        close.textContent = "×";
+        close.setAttribute("aria-label", "閉じる");
+        close.addEventListener("click", hidePostPopover);
+        close.hidden = !locked;
+
+        head.append(title, close);
+        return head;
+      }
+
+      function buildTextBody(text) {
+        const body = document.createElement("div");
+        body.className = "popover-body";
+        body.textContent = text;
+        return body;
+      }
+
+      function placePopover(anchor) {
+        els.postPopover.classList.add("is-open");
+        const anchorRect = anchor.getBoundingClientRect();
+        const popoverRect = els.postPopover.getBoundingClientRect();
+        const margin = 12;
+        const preferredLeft = anchorRect.left;
+        const preferredTop = anchorRect.bottom + 8;
+        const maxLeft = window.innerWidth - popoverRect.width - margin;
+        const maxTop = window.innerHeight - popoverRect.height - margin;
+        const left = clamp(preferredLeft, margin, Math.max(margin, maxLeft));
+        const fallbackTop = anchorRect.top - popoverRect.height - 8;
+        const top =
+          preferredTop <= maxTop
+            ? preferredTop
+            : clamp(fallbackTop, margin, Math.max(margin, maxTop));
+
+        els.postPopover.style.left = `${left}px`;
+        els.postPopover.style.top = `${top}px`;
+      }
+
+      function hidePostPopover() {
+        popoverLocked = false;
+        els.postPopover.classList.remove("is-open");
+      }
+
+      function renderComposeTargets() {
+        const mine = state.accounts.filter((account) => account.mine);
+        const options = mine.length ? mine : [state.accounts[0]];
+        const current = els.composeTarget.value || options[0].id;
+        els.composeTarget.replaceChildren(
+          ...options.map((account) => {
+            const option = document.createElement("option");
+            option.value = account.id;
+            option.textContent = account.displayName;
+            return option;
+          }),
+        );
+        els.composeTarget.value = options.some((account) => account.id === current)
+          ? current
+          : options[0].id;
+      }
+
+      function updateComposerState() {
+        const length = els.composeText.value.trim().length;
+        els.charCount.textContent = `${length} / ${MAX_POST_LENGTH}`;
+        els.charCount.classList.toggle("over", length > MAX_POST_LENGTH);
+        els.submitPost.disabled =
+          !state.session || length === 0 || length > MAX_POST_LENGTH;
+        els.composeText.placeholder = state.session
+          ? "いま投稿する内容"
+          : "Bluesky認証後に投稿できます";
+      }
+
+      async function addAccount({ displayName, handle, provider }) {
+        const cleanHandle = normalizeHandle(handle);
+        if (!cleanHandle) return;
+
+        if (provider === "bluesky") {
+          const profile = await getBlueskyProfile(cleanHandle);
+          const account = {
+            id: `bluesky-${profile.did || cleanHandle}`,
+            provider,
+            handle: profile.handle || cleanHandle,
+            did: profile.did || "",
+            displayName: displayName || profile.displayName || profile.handle || cleanHandle,
+            mine: false,
+            demo: false,
+          };
+          upsertAccount(account);
+          persistState();
+          render();
+          await loadAccountFeed(account, { resetCursor: true });
+          render();
+          return;
+        }
+
+        upsertAccount({
+          id: `x-${cleanHandle}`,
+          provider,
+          handle: cleanHandle,
+          displayName: displayName || cleanHandle,
+          mine: false,
+          demo: false,
+          disabledReason: "X API key is required",
+        });
+        render();
+        persistState();
+      }
+
+      function addPost(accountId, text, createdAt, options = {}) {
+        const id =
+          options.id ||
+          `${accountId}-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+        const fullText = normalizePostText(text);
+        const uri = options.uri || `sample://${id}`;
+        const existing = state.posts.find((post) => post.uri === uri);
+        if (existing) {
+          existing.text = fullText;
+          existing.preview = makePostPreview(fullText);
+          existing.createdAt = new Date(createdAt);
+          existing.cid = options.cid || existing.cid;
+          existing.rawUrl = options.rawUrl || existing.rawUrl;
+          return existing;
+        }
+
+        const account = state.accounts.find((item) => item.id === accountId);
+        state.posts.unshift({
+          id,
+          provider:
+            account?.provider ||
+            "bluesky",
+          accountId,
+          uri,
+          cid: options.cid || "",
+          rawUrl: options.rawUrl || buildPostUrl(account, uri),
+          text: fullText,
+          preview: makePostPreview(fullText),
+          createdAt: new Date(createdAt),
+        });
+        trimPostCache();
+        return state.posts[0];
+      }
+
+      async function loadLatestPosts({ silent = false } = {}) {
+        if (state.isLoading) return;
+        state.isLoading = true;
+        if (!silent) {
+          state.syncMessage = "ロード中";
+          render();
+        }
+
+        try {
+          const accounts = state.accounts.filter(canFetchAccount);
+          await Promise.all(
+            accounts.map((account) => loadAccountFeed(account, { resetCursor: true })),
+          );
+          state.lastSyncedAt = new Date().toISOString();
+          state.syncMessage = accounts.length
+            ? `最終ロード ${formatTime(new Date())}`
+            : "Blueskyアカウント未登録";
+          persistState();
+        } catch (error) {
+          state.syncMessage = error.message || "ロード失敗";
+        } finally {
+          state.isLoading = false;
+          render();
+        }
+      }
+
+      async function loadOlderPosts() {
+        const accounts = state.accounts.filter(canFetchAccount);
+        await Promise.all(
+          accounts.map((account) => loadAccountFeed(account, { resetCursor: false })),
+        );
+        persistState();
+      }
+
+      async function loginBluesky({ identifier, password, service, remember }) {
+        const normalizedService = normalizeService(service || DEFAULT_BSKY_SERVICE);
+        const session = await xrpc(normalizedService, "com.atproto.server.createSession", {
+          method: "POST",
+          body: {
+            identifier,
+            password,
+          },
+        });
+
+        state.session = {
+          service: normalizedService,
+          did: session.did,
+          handle: session.handle,
+          accessJwt: session.accessJwt,
+          refreshJwt: session.refreshJwt,
+          saved: Boolean(remember),
+        };
+
+        const profile = await getBlueskyProfile(session.handle || session.did);
+        const self = {
+          id: "self",
+          provider: "bluesky",
+          handle: profile.handle || session.handle,
+          did: profile.did || session.did,
+          displayName: profile.displayName || session.handle || "自分",
+          mine: true,
+          demo: false,
+        };
+
+        upsertAccount(self);
+        persistState();
+        render();
+        await loadLatestPosts({ silent: true });
+      }
+
+      function logout() {
+        state.session = null;
+        const self = state.accounts.find((account) => account.id === "self");
+        if (self) {
+          self.handle = "you.bsky.social";
+          self.displayName = "自分";
+          self.did = "";
+          self.demo = true;
+        }
+        persistState();
+        render();
+      }
+
+      async function publishPost(accountId, text) {
+        if (!state.session) {
+          throw new Error("Bluesky認証が必要です。");
+        }
+
+        const account = state.accounts.find((item) => item.id === accountId);
+        if (!account?.mine) {
+          throw new Error("現在のMVPでは自分のBlueskyアカウントへの投稿のみ対応しています。");
+        }
+
+        const createdAt = new Date();
+        const result = await authenticatedXrpc("com.atproto.repo.createRecord", {
+          method: "POST",
+          body: {
+            repo: state.session.did || state.session.handle,
+            collection: "app.bsky.feed.post",
+            record: {
+              $type: "app.bsky.feed.post",
+              text,
+              createdAt: createdAt.toISOString(),
+            },
+          },
+        });
+
+        addPost(account.id, text, createdAt, {
+          uri: result.uri,
+          cid: result.cid,
+          rawUrl: buildPostUrl(account, result.uri),
+        });
+        persistState();
+      }
+
+      async function loadAccountFeed(account, { resetCursor }) {
+        if (!canFetchAccount(account)) return;
+
+        const cursor = resetCursor ? "" : state.feedCursors[account.id] || "";
+        const query = {
+          actor: account.did || account.handle,
+          limit: "50",
+          filter: "posts_no_replies",
+        };
+        if (cursor) query.cursor = cursor;
+
+        const feed = await xrpc(PUBLIC_BSKY_SERVICE, "app.bsky.feed.getAuthorFeed", {
+          query,
+        });
+
+        if (feed.cursor) state.feedCursors[account.id] = feed.cursor;
+
+        for (const item of feed.feed || []) {
+          const post = item.post;
+          const record = post?.record || {};
+          if (!post?.uri || !record.text) continue;
+          addPost(account.id, record.text, record.createdAt || post.indexedAt || new Date(), {
+            uri: post.uri,
+            cid: post.cid,
+            rawUrl: buildPostUrl(account, post.uri),
+          });
+        }
+      }
+
+      async function getBlueskyProfile(actor) {
+        const profile = await xrpc(PUBLIC_BSKY_SERVICE, "app.bsky.actor.getProfile", {
+          query: { actor },
+        });
+        if (!profile.did && !profile.handle) {
+          throw new Error("Blueskyプロフィールを取得できませんでした。");
+        }
+        return profile;
+      }
+
+      async function authenticatedXrpc(methodName, options) {
+        if (!state.session?.accessJwt) {
+          throw new Error("Bluesky認証が必要です。");
+        }
+
+        try {
+          return await xrpc(state.session.service, methodName, {
+            ...options,
+            token: state.session.accessJwt,
+          });
+        } catch (error) {
+          if (error.status !== 401) throw error;
+          await refreshBlueskySession();
+          return xrpc(state.session.service, methodName, {
+            ...options,
+            token: state.session.accessJwt,
+          });
+        }
+      }
+
+      async function refreshBlueskySession() {
+        if (!state.session?.refreshJwt) {
+          throw new Error("再認証が必要です。");
+        }
+
+        const refreshed = await xrpc(state.session.service, "com.atproto.server.refreshSession", {
+          method: "POST",
+          token: state.session.refreshJwt,
+        });
+
+        state.session = {
+          ...state.session,
+          did: refreshed.did || state.session.did,
+          handle: refreshed.handle || state.session.handle,
+          accessJwt: refreshed.accessJwt,
+          refreshJwt: refreshed.refreshJwt,
+        };
+        persistState();
+      }
+
+      async function xrpc(service, methodName, { method = "GET", query, body, token } = {}) {
+        const url = new URL(`/xrpc/${methodName}`, normalizeService(service));
+        for (const [key, value] of Object.entries(query || {})) {
+          if (value !== undefined && value !== "") url.searchParams.set(key, value);
+        }
+
+        const headers = {};
+        if (body) headers["Content-Type"] = "application/json";
+        if (token) headers.Authorization = `Bearer ${token}`;
+
+        const response = await fetch(url.toString(), {
+          method,
+          headers,
+          body: body ? JSON.stringify(body) : undefined,
+        });
+
+        let payload = null;
+        const contentType = response.headers.get("content-type") || "";
+        if (contentType.includes("application/json")) {
+          payload = await response.json();
+        }
+
+        if (!response.ok) {
+          const error = new Error(
+            payload?.message ||
+              payload?.error ||
+              `${methodName} failed with ${response.status}`,
+          );
+          error.status = response.status;
+          error.payload = payload;
+          throw error;
+        }
+
+        return payload || {};
+      }
+
+      function canFetchAccount(account) {
+        return account.provider === "bluesky" && !account.demo && Boolean(account.handle || account.did);
+      }
+
+      function upsertAccount(account) {
+        const index = state.accounts.findIndex(
+          (item) =>
+            item.id === account.id ||
+            (account.did && item.did === account.did) ||
+            (item.provider === account.provider &&
+              item.handle?.toLowerCase() === account.handle?.toLowerCase()),
+        );
+        if (index >= 0) {
+          state.accounts[index] = { ...state.accounts[index], ...account };
+          return state.accounts[index];
+        }
+        state.accounts.push(account);
+        return account;
+      }
+
+      function ensureSelfAccount() {
+        const self = state.accounts.find((account) => account.id === "self");
+        if (self) {
+          if (state.session) {
+            self.provider = "bluesky";
+            self.handle = state.session.handle || self.handle;
+            self.did = state.session.did || self.did;
+            self.mine = true;
+            self.demo = false;
+          }
+          return;
+        }
+
+        state.accounts.unshift({
+          id: "self",
+          provider: "bluesky",
+          handle: state.session?.handle || "you.bsky.social",
+          did: state.session?.did || "",
+          displayName: state.session?.handle || "自分",
+          mine: true,
+          demo: !state.session,
+        });
+      }
+
+      function renderAuthStatus() {
+        els.authButton.textContent = state.session ? state.session.handle : "未認証";
+        els.authButton.classList.toggle("signed-in", Boolean(state.session));
+        els.authButton.title = state.session
+          ? `${state.session.handle} として認証済み`
+          : "Blueskyアカウント認証";
+      }
+
+      function setAuthMessage(message, kind = "") {
+        els.authMessage.textContent = message;
+        els.authMessage.className = `dialog-message${kind ? ` ${kind}` : ""}`;
+      }
+
+      function persistState() {
+        const session = state.session?.saved === false ? null : state.session;
+        try {
+          localStorage.setItem(
+            STORAGE_KEY,
+            JSON.stringify({
+              version: 1,
+              accounts: state.accounts,
+              posts: state.posts.slice(0, 800),
+              session,
+              lastSyncedAt: state.lastSyncedAt,
+            }),
+          );
+        } catch {
+          state.syncMessage = "保存不可";
+        }
+      }
+
+      function loadStoredAccounts() {
+        const stored = loadStoredAppState();
+        return Array.isArray(stored.accounts) && stored.accounts.length
+          ? stored.accounts
+          : defaultAccounts();
+      }
+
+      function loadStoredPosts() {
+        const stored = loadStoredAppState();
+        if (!Array.isArray(stored.posts)) return [];
+        return stored.posts
+          .map((post) => ({
+            ...post,
+            createdAt: new Date(post.createdAt),
+            preview: post.preview || makePostPreview(post.text || ""),
+          }))
+          .filter((post) => !Number.isNaN(post.createdAt.getTime()));
+      }
+
+      function loadStoredSession() {
+        const stored = loadStoredAppState();
+        return stored.session || null;
+      }
+
+      function loadStoredAppState() {
+        try {
+          return JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
+        } catch {
+          return {};
+        }
+      }
+
+      function defaultAccounts() {
+        return [
+          {
+            id: "self",
+            provider: "bluesky",
+            handle: "you.bsky.social",
+            displayName: "自分",
+            mine: true,
+            demo: true,
+          },
+          {
+            id: "elon",
+            provider: "x",
+            handle: "elonmusk",
+            displayName: "イーロン",
+            mine: false,
+            demo: true,
+          },
+          {
+            id: "trump",
+            provider: "x",
+            handle: "realdonaldtrump",
+            displayName: "トランプ",
+            mine: false,
+            demo: true,
+          },
+          {
+            id: "sam",
+            provider: "bluesky",
+            handle: "sama.bsky.social",
+            displayName: "サムアルトマン",
+            mine: false,
+            demo: true,
+          },
+          {
+            id: "dario",
+            provider: "bluesky",
+            handle: "dario.example",
+            displayName: "ダリオ・アモデイ",
+            mine: false,
+            demo: true,
+          },
+        ];
+      }
+
+      function trimPostCache() {
+        state.posts.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+        if (state.posts.length > 1000) state.posts.length = 1000;
+      }
+
+      function normalizeService(service) {
+        const trimmed = String(service || DEFAULT_BSKY_SERVICE).trim().replace(/\/+$/, "");
+        return trimmed.startsWith("http") ? trimmed : `https://${trimmed}`;
+      }
+
+      function normalizeHandle(handle) {
+        return String(handle || "")
+          .trim()
+          .replace(/^@/, "")
+          .toLowerCase();
+      }
+
+      function buildPostUrl(account, uri) {
+        if (!account?.handle || !uri?.startsWith("at://")) return "";
+        const rkey = uri.split("/").pop();
+        return `https://bsky.app/profile/${account.handle}/post/${rkey}`;
+      }
+
+      function seedPosts() {
+        const samples = [
+          ["self", 0, "今日は晴れていた"],
+          ["self", 5, "ご飯食べた"],
+          ["self", 5, "この分に複数投稿があるので圧縮される"],
+          ["self", 6, "今帰り"],
+          ["elon", 4, "TRUE"],
+          ["elon", 4, "打ち上げスケジュールを確認中"],
+          ["trump", 3, "キャンペーン移動中"],
+          ["sam", 5, "モデル評価メモ"],
+          ["sam", 5, "My son gets a bedtime story"],
+          ["dario", 5, "Hey check this"],
+          ["dario", 17, "安全性レビューのメモを更新"],
+          ["sam", 27, "夜の実験ログを短く共有"],
+          ["self", 38, "午後の作業ログ"],
+          ["trump", 47, "イベント告知のサンプル"],
+          ["elon", 64, "さらにロード後に見える古い投稿"],
+          ["self", 78, "過去ログのサンプル"],
+        ];
+
+        for (const [accountId, minutesAgo, text] of samples) {
+          addPost(accountId, text, offsetMinute(minutesAgo));
+        }
+      }
+
+      function startMinuteTicker() {
+        window.setInterval(() => {
+          const nextNow = floorToMinute(new Date());
+          if (nextNow.getTime() !== state.now.getTime()) {
+            state.now = nextNow;
+            render();
+            els.scroll.scrollTop = 0;
+            loadLatestPosts({ silent: true });
+          }
+        }, 1000);
+      }
+
+      function groupPosts(minutes) {
+        const minuteKeys = new Set(minutes.map(toMinuteKey));
+        const grouped = new Map();
+        for (const post of state.posts) {
+          const minuteKey = toMinuteKey(post.createdAt);
+          if (!minuteKeys.has(minuteKey)) continue;
+          const key = `${minuteKey}:${post.accountId}`;
+          if (!grouped.has(key)) grouped.set(key, []);
+          grouped.get(key).push(post);
+        }
+
+        for (const posts of grouped.values()) {
+          posts.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+        }
+        return grouped;
+      }
+
+      function buildMinutes(now, count) {
+        return Array.from({ length: count }, (_, index) => offsetMinute(index, now));
+      }
+
+      function cell(className, text) {
+        const element = document.createElement("div");
+        element.className = className;
+        element.textContent = text;
+        return element;
+      }
+
+      function offsetMinute(minutesAgo, base = state.now) {
+        return new Date(base.getTime() - minutesAgo * 60 * 1000);
+      }
+
+      function floorToMinute(date) {
+        const next = new Date(date);
+        next.setSeconds(0, 0);
+        return next;
+      }
+
+      function toMinuteKey(date) {
+        const d = floorToMinute(date);
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, "0");
+        const day = String(d.getDate()).padStart(2, "0");
+        const hour = String(d.getHours()).padStart(2, "0");
+        const minute = String(d.getMinutes()).padStart(2, "0");
+        return `${year}-${month}-${day}T${hour}:${minute}`;
+      }
+
+      function formatTime(date) {
+        return new Intl.DateTimeFormat("ja-JP", {
+          hour: "2-digit",
+          minute: "2-digit",
+          hour12: false,
+        }).format(date);
+      }
+
+      function normalizePostText(text) {
+        return String(text).trim();
+      }
+
+      function makePostPreview(text) {
+        const clean = text.replace(/\s+/g, " ").trim();
+        return clean.length > 48
+          ? `${clean.slice(0, 47)}…`
+          : clean;
+      }
+
+      function clamp(value, min, max) {
+        return Math.min(Math.max(value, min), max);
+      }
+    </script>
+  </body>
+</html>
