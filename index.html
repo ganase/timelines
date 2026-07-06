@@ -7,22 +7,27 @@
     <style>
       :root {
         color-scheme: light;
-        --bg: #f6f7f8;
+        --bg: #eef0f4;
         --paper: #ffffff;
-        --ink: #111318;
-        --muted: #69707d;
-        --line: #d7dbe2;
-        --line-strong: #17191d;
-        --header: #050506;
-        --post: #a8caea;
-        --post-strong: #78addc;
+        --ink: #14161c;
+        --muted: #6b7280;
+        --line: #e2e5eb;
+        --line-strong: #d8dce3;
+        --header: #1c1f2a;
+        --header-line: #383c4a;
+        --post: #dbe7fb;
+        --post-strong: #4f7cc2;
         --accent: #0f8f72;
-        --danger: #bf3b3b;
-        --composer: #eef2f5;
-        --shadow: 0 -10px 28px rgba(17, 19, 24, 0.08);
+        --accent-soft: #e6f5f0;
+        --danger: #c23a3a;
+        --composer: #f3f5f8;
+        --radius: 14px;
+        --radius-sm: 8px;
+        --shadow-card: 0 1px 2px rgba(20, 22, 28, 0.04), 0 12px 28px rgba(20, 22, 28, 0.06);
+        --shadow: 0 -12px 28px rgba(20, 22, 28, 0.05);
         --time-col: 72px;
         --row-h: 40px;
-        --head-h: 32px;
+        --head-h: 34px;
       }
 
       * {
@@ -37,6 +42,7 @@
         font-family:
           Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
           "Segoe UI", sans-serif;
+        -webkit-font-smoothing: antialiased;
       }
 
       button,
@@ -64,6 +70,7 @@
         padding: 14px 18px 12px;
         background: var(--paper);
         border-bottom: 1px solid var(--line);
+        box-shadow: 0 1px 0 rgba(20, 22, 28, 0.02);
       }
 
       .brand {
@@ -76,8 +83,9 @@
       h1 {
         margin: 0;
         font-size: 20px;
+        font-weight: 800;
         line-height: 1.1;
-        letter-spacing: 0;
+        letter-spacing: -0.01em;
       }
 
       .window-label {
@@ -98,9 +106,15 @@
       .load-button,
       .dialog-button {
         border: 1px solid var(--line-strong);
+        border-radius: var(--radius-sm);
         background: var(--paper);
         color: var(--ink);
         min-height: 34px;
+        transition:
+          background 0.15s ease,
+          border-color 0.15s ease,
+          box-shadow 0.15s ease,
+          transform 0.1s ease;
       }
 
       .tool-button {
@@ -113,15 +127,29 @@
       }
 
       .tool-button:hover,
-      .submit-button:hover,
+      .submit-button:hover:not(:disabled),
       .load-button:hover,
       .dialog-button:hover {
-        background: #edf3f1;
+        border-color: var(--post-strong);
+        box-shadow: 0 4px 10px rgba(20, 22, 28, 0.08);
+      }
+
+      .tool-button:active,
+      .submit-button:active:not(:disabled),
+      .load-button:active,
+      .dialog-button:active {
+        transform: translateY(1px);
       }
 
       .tool-button.primary {
         background: var(--header);
+        border-color: var(--header);
         color: #fff;
+      }
+
+      .tool-button.primary:hover {
+        border-color: var(--header);
+        box-shadow: 0 4px 12px rgba(28, 31, 42, 0.25);
       }
 
       .auth-button {
@@ -135,13 +163,24 @@
 
       .auth-button.signed-in {
         border-color: var(--accent);
-        background: #e8f5f1;
+        background: var(--accent-soft);
         color: #0c604e;
       }
 
       .timeline-wrap {
         min-height: 0;
-        padding: 14px 18px 0;
+        padding: 16px 18px 0;
+      }
+
+      .empty-hint {
+        margin: 0 0 12px;
+        padding: 10px 14px;
+        border: 1px dashed var(--post-strong);
+        border-radius: var(--radius-sm);
+        background: var(--accent-soft);
+        color: #0c604e;
+        font-size: 13px;
+        line-height: 1.5;
       }
 
       .timeline-scroll {
@@ -150,6 +189,8 @@
         overflow: auto;
         background: var(--paper);
         border: 1px solid var(--line-strong);
+        border-radius: var(--radius);
+        box-shadow: var(--shadow-card);
       }
 
       .timeline-grid {
@@ -172,10 +213,11 @@
         place-items: center;
         background: var(--header);
         color: #fff;
-        border-right: 1px solid #70737a;
-        border-bottom: 1px solid var(--line-strong);
+        border-right: 1px solid var(--header-line);
+        border-bottom: 1px solid var(--header-line);
         font-size: 12px;
-        font-weight: 700;
+        font-weight: 600;
+        letter-spacing: 0.01em;
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
@@ -202,14 +244,15 @@
         display: grid;
         place-items: center;
         background: var(--header);
-        color: #fff;
-        border-right: 1px solid #70737a;
-        border-bottom: 1px solid #fff;
+        color: rgba(255, 255, 255, 0.88);
+        border-right: 1px solid var(--header-line);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.06);
         font-size: 13px;
         font-variant-numeric: tabular-nums;
       }
 
       .time-cell.current {
+        color: #fff;
         outline: 2px solid var(--accent);
         outline-offset: -2px;
       }
@@ -217,14 +260,14 @@
       .slot {
         height: var(--row-h);
         min-width: 0;
-        border-bottom: 1px solid var(--line-strong);
+        border-bottom: 1px solid var(--line);
         border-right: 1px solid var(--line);
         padding: 3px 6px;
         background: #fff;
       }
 
       .slot.current {
-        background: #fbfefc;
+        background: var(--accent-soft);
       }
 
       .post-stack {
@@ -248,6 +291,7 @@
         padding: 0 10px;
         background: var(--post);
         border-left: 3px solid var(--post-strong);
+        border-radius: 0 4px 4px 0;
         color: #101820;
         font-size: 12px;
         line-height: 32px;
@@ -255,18 +299,20 @@
         overflow: hidden;
         text-overflow: ellipsis;
         cursor: pointer;
+        transition: box-shadow 0.12s ease, filter 0.12s ease;
       }
 
       .post-card:hover,
       .post-card:focus-visible,
       .post-more:hover,
       .post-more:focus-visible {
-        outline: 2px solid #111318;
+        outline: 2px solid var(--header);
         outline-offset: -2px;
+        filter: brightness(0.97);
       }
 
       .post-card.mine {
-        background: #c4ddef;
+        background: #cfe3d9;
         border-left-color: var(--accent);
       }
 
@@ -290,8 +336,9 @@
         display: flex;
         align-items: center;
         color: var(--muted);
-        background: #e7edf3;
-        border-left: 3px solid #aeb9c5;
+        background: #e7ebf1;
+        border-left: 3px solid #b7bfca;
+        border-radius: 0 4px 4px 0;
         font-size: 11px;
         white-space: nowrap;
         cursor: pointer;
@@ -310,9 +357,10 @@
         max-height: min(360px, calc(100vh - 24px));
         display: none;
         overflow: auto;
-        border: 1px solid var(--line-strong);
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
         background: #fff;
-        box-shadow: 0 16px 38px rgba(17, 19, 24, 0.22);
+        box-shadow: 0 16px 38px rgba(20, 22, 28, 0.18);
       }
 
       .post-popover.is-open {
@@ -349,6 +397,7 @@
         height: 28px;
         flex: 0 0 auto;
         border: 1px solid var(--line);
+        border-radius: var(--radius-sm);
         background: #fff;
         color: var(--ink);
         line-height: 1;
@@ -390,6 +439,7 @@
         justify-content: center;
         padding: 12px;
         background: #fff;
+        border-radius: 0 0 var(--radius) var(--radius);
       }
 
       .load-button {
@@ -432,9 +482,18 @@
       .dialog-body select {
         min-height: 32px;
         border: 1px solid var(--line);
+        border-radius: var(--radius-sm);
         background: #fff;
         color: var(--ink);
         padding: 0 9px;
+      }
+
+      .compose-target select:focus-visible,
+      .dialog-body input:focus-visible,
+      .dialog-body select:focus-visible,
+      textarea:focus-visible {
+        outline: 2px solid var(--post-strong);
+        outline-offset: 1px;
       }
 
       .char-count {
@@ -453,6 +512,7 @@
         height: 52px;
         resize: none;
         border: 1px solid var(--line-strong);
+        border-radius: var(--radius-sm);
         padding: 9px 10px;
         background: #fff;
         color: var(--ink);
@@ -464,6 +524,7 @@
         min-width: 92px;
         padding: 0 18px;
         background: var(--header);
+        border-color: var(--header);
         color: #fff;
         font-weight: 700;
       }
@@ -471,16 +532,18 @@
       .submit-button:disabled {
         cursor: not-allowed;
         border-color: var(--line);
-        background: #aeb4bb;
+        background: #b4b9c2;
         color: #f6f7f8;
       }
 
       dialog {
         width: min(420px, calc(100vw - 32px));
-        border: 1px solid var(--line-strong);
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
         padding: 0;
         background: #fff;
         color: var(--ink);
+        box-shadow: 0 24px 60px rgba(20, 22, 28, 0.28);
       }
 
       dialog::backdrop {
@@ -651,6 +714,9 @@
       </header>
 
       <section class="timeline-wrap" aria-label="時刻表タイムライン">
+        <p class="empty-hint" id="emptyHint" hidden>
+          右上の <strong>+</strong> からBlueskyアカウントを追加すると、タイムラインに投稿が表示されます。
+        </p>
         <div class="timeline-scroll" id="timelineScroll">
           <div class="timeline-grid" id="timelineGrid"></div>
           <div class="load-bar" id="loadBar">
@@ -822,6 +888,7 @@
       const els = {
         grid: document.getElementById("timelineGrid"),
         scroll: document.getElementById("timelineScroll"),
+        emptyHint: document.getElementById("emptyHint"),
         loadBar: document.getElementById("loadBar"),
         loadMore: document.getElementById("loadMore"),
         windowLabel: document.getElementById("windowLabel"),
@@ -858,7 +925,6 @@
       let popoverLocked = false;
 
       ensureSelfAccount();
-      if (state.posts.length === 0) seedPosts();
       render();
       wireEvents();
       startMinuteTicker();
@@ -1025,6 +1091,7 @@
         });
 
         els.grid.replaceChildren(fragment);
+        els.emptyHint.hidden = state.accounts.some((account) => !account.mine);
         els.windowLabel.textContent = `${formatTime(minutes[0])} から ${formatTime(
           minutes[minutes.length - 1],
         )} まで / ${state.windowMinutes}分${state.syncMessage ? ` / ${state.syncMessage}` : ""}`;
@@ -1649,48 +1716,7 @@
       }
 
       function defaultAccounts() {
-        return [
-          {
-            id: "self",
-            provider: "bluesky",
-            handle: "you.bsky.social",
-            displayName: "自分",
-            mine: true,
-            demo: true,
-          },
-          {
-            id: "elon",
-            provider: "x",
-            handle: "elonmusk",
-            displayName: "イーロン",
-            mine: false,
-            demo: true,
-          },
-          {
-            id: "trump",
-            provider: "x",
-            handle: "realdonaldtrump",
-            displayName: "トランプ",
-            mine: false,
-            demo: true,
-          },
-          {
-            id: "sam",
-            provider: "bluesky",
-            handle: "sama.bsky.social",
-            displayName: "サムアルトマン",
-            mine: false,
-            demo: true,
-          },
-          {
-            id: "dario",
-            provider: "bluesky",
-            handle: "dario.example",
-            displayName: "ダリオ・アモデイ",
-            mine: false,
-            demo: true,
-          },
-        ];
+        return [];
       }
 
       function trimPostCache() {
@@ -1714,31 +1740,6 @@
         if (!account?.handle || !uri?.startsWith("at://")) return "";
         const rkey = uri.split("/").pop();
         return `https://bsky.app/profile/${account.handle}/post/${rkey}`;
-      }
-
-      function seedPosts() {
-        const samples = [
-          ["self", 0, "今日は晴れていた"],
-          ["self", 5, "ご飯食べた"],
-          ["self", 5, "この分に複数投稿があるので圧縮される"],
-          ["self", 6, "今帰り"],
-          ["elon", 4, "TRUE"],
-          ["elon", 4, "打ち上げスケジュールを確認中"],
-          ["trump", 3, "キャンペーン移動中"],
-          ["sam", 5, "モデル評価メモ"],
-          ["sam", 5, "My son gets a bedtime story"],
-          ["dario", 5, "Hey check this"],
-          ["dario", 17, "安全性レビューのメモを更新"],
-          ["sam", 27, "夜の実験ログを短く共有"],
-          ["self", 38, "午後の作業ログ"],
-          ["trump", 47, "イベント告知のサンプル"],
-          ["elon", 64, "さらにロード後に見える古い投稿"],
-          ["self", 78, "過去ログのサンプル"],
-        ];
-
-        for (const [accountId, minutesAgo, text] of samples) {
-          addPost(accountId, text, offsetMinute(minutesAgo));
-        }
       }
 
       function startMinuteTicker() {
