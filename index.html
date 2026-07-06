@@ -870,6 +870,7 @@
       const DEFAULT_WINDOW_MINUTES = 60;
       const LOAD_STEP_MINUTES = 60;
       const STORAGE_KEY = "timelines:v1";
+      const REMOVED_DEMO_ACCOUNT_IDS = new Set(["elon", "trump", "sam", "dario"]);
       const PUBLIC_BSKY_SERVICE = "https://public.api.bsky.app";
       const DEFAULT_BSKY_SERVICE = "https://bsky.social";
 
@@ -925,6 +926,7 @@
       let popoverLocked = false;
 
       ensureSelfAccount();
+      persistState();
       render();
       wireEvents();
       startMinuteTicker();
@@ -1685,15 +1687,22 @@
 
       function loadStoredAccounts() {
         const stored = loadStoredAppState();
-        return Array.isArray(stored.accounts) && stored.accounts.length
-          ? stored.accounts
-          : defaultAccounts();
+        const accounts = Array.isArray(stored.accounts) ? stored.accounts : [];
+        const cleaned = accounts.filter(
+          (account) => !REMOVED_DEMO_ACCOUNT_IDS.has(account.id),
+        );
+        return cleaned.length ? cleaned : defaultAccounts();
       }
 
       function loadStoredPosts() {
         const stored = loadStoredAppState();
         if (!Array.isArray(stored.posts)) return [];
         return stored.posts
+          .filter(
+            (post) =>
+              !REMOVED_DEMO_ACCOUNT_IDS.has(post.accountId) &&
+              !String(post.uri || "").startsWith("sample://"),
+          )
           .map((post) => ({
             ...post,
             createdAt: new Date(post.createdAt),
