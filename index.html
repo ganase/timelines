@@ -43,6 +43,8 @@
           Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
           "Segoe UI", sans-serif;
         -webkit-font-smoothing: antialiased;
+        display: flex;
+        justify-content: center;
       }
 
       button,
@@ -57,9 +59,12 @@
       }
 
       .app {
+        width: 100%;
+        max-width: 1440px;
         min-height: 100vh;
         display: grid;
         grid-template-rows: auto 1fr auto;
+        box-shadow: 0 0 0 1px var(--line);
       }
 
       .topbar {
@@ -230,9 +235,61 @@
       }
 
       .account-head {
-        display: block;
-        line-height: var(--head-h);
-        text-align: center;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        overflow: visible;
+      }
+
+      .account-avatar {
+        flex: 0 0 auto;
+        width: 18px;
+        height: 18px;
+        display: grid;
+        place-items: center;
+        border-radius: 50%;
+        color: #fff;
+        font-size: 10px;
+        font-weight: 700;
+        line-height: 1;
+      }
+
+      .account-head-name {
+        flex: 1 1 auto;
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        text-align: left;
+      }
+
+      .account-head-actions {
+        flex: 0 0 auto;
+        display: flex;
+        gap: 2px;
+      }
+
+      .account-head-btn {
+        width: 18px;
+        height: 18px;
+        flex: 0 0 auto;
+        display: grid;
+        place-items: center;
+        border: none;
+        border-radius: 5px;
+        background: rgba(255, 255, 255, 0.14);
+        color: #fff;
+        font-size: 11px;
+        line-height: 1;
+        transition: background 0.12s ease;
+      }
+
+      .account-head-btn:hover {
+        background: rgba(255, 255, 255, 0.3);
+      }
+
+      .account-head-btn.danger:hover {
+        background: var(--danger);
       }
 
       .time-cell {
@@ -625,7 +682,18 @@
 
       .dialog-button.primary {
         background: var(--header);
+        border-color: var(--header);
         color: #fff;
+      }
+
+      .dialog-button.danger {
+        margin-right: auto;
+        border-color: var(--danger);
+        color: var(--danger);
+      }
+
+      .dialog-button.danger:hover {
+        background: #fbebeb;
       }
 
       @media (max-width: 760px) {
@@ -855,6 +923,14 @@
           </div>
         </div>
         <div class="dialog-actions">
+          <button
+            class="dialog-button danger"
+            id="deleteAccountButton"
+            type="button"
+            hidden
+          >
+            削除
+          </button>
           <button class="dialog-button" id="cancelAccount" type="button">
             キャンセル
           </button>
@@ -871,6 +947,7 @@
       const LOAD_STEP_MINUTES = 60;
       const STORAGE_KEY = "timelines:v1";
       const REMOVED_DEMO_ACCOUNT_IDS = new Set(["elon", "trump", "sam", "dario"]);
+      const AVATAR_PALETTE = ["#4f7cc2", "#0f8f72", "#b5762f", "#8a5fbf", "#c2467a", "#2f9aa8"];
       const PUBLIC_BSKY_SERVICE = "https://public.api.bsky.app";
       const DEFAULT_BSKY_SERVICE = "https://bsky.social";
 
@@ -909,9 +986,11 @@
         authMessage: document.getElementById("authMessage"),
         addAccountButton: document.getElementById("addAccountButton"),
         dialog: document.getElementById("accountDialog"),
+        accountDialogTitle: document.getElementById("accountDialogTitle"),
         closeDialog: document.getElementById("closeAccountDialog"),
         cancelAccount: document.getElementById("cancelAccount"),
         saveAccount: document.getElementById("saveAccount"),
+        deleteAccountButton: document.getElementById("deleteAccountButton"),
         accountName: document.getElementById("accountName"),
         accountHandle: document.getElementById("accountHandle"),
         accountProvider: document.getElementById("accountProvider"),
@@ -924,6 +1003,7 @@
       };
 
       let popoverLocked = false;
+      let editingAccountId = null;
 
       ensureSelfAccount();
       persistState();
@@ -968,13 +1048,7 @@
           els.authDialog.close();
         });
 
-        els.addAccountButton.addEventListener("click", () => {
-          els.accountName.value = "";
-          els.accountHandle.value = "";
-          els.accountProvider.value = "bluesky";
-          els.dialog.showModal();
-          els.accountName.focus();
-        });
+        els.addAccountButton.addEventListener("click", () => openAccountDialog(null));
 
         els.closeDialog.addEventListener("click", () => els.dialog.close());
         els.cancelAccount.addEventListener("click", () => els.dialog.close());
@@ -988,16 +1062,31 @@
           event.preventDefault();
           els.saveAccount.disabled = true;
           try {
-            await addAccount({
+            const payload = {
               displayName: els.accountName.value.trim(),
               handle: els.accountHandle.value.trim(),
               provider: els.accountProvider.value,
-            });
+            };
+            if (editingAccountId) {
+              await updateAccount(editingAccountId, payload);
+            } else {
+              await addAccount(payload);
+            }
             els.dialog.close();
           } catch (error) {
-            alert(error.message || "アカウント追加に失敗しました。");
+            alert(error.message || "アカウントの保存に失敗しました。");
           } finally {
             els.saveAccount.disabled = false;
+          }
+        });
+
+        els.deleteAccountButton.addEventListener("click", () => {
+          if (!editingAccountId) return;
+          const account = state.accounts.find((item) => item.id === editingAccountId);
+          if (!account) return;
+          if (confirm(`${account.displayName} を削除しますか？`)) {
+            removeAccount(editingAccountId);
+            els.dialog.close();
           }
         });
 
@@ -1072,9 +1161,7 @@
 
         fragment.appendChild(cell("corner", ""));
         for (const account of state.accounts) {
-          const head = cell("account-head", account.displayName);
-          head.title = `${account.displayName} / ${account.provider}: ${account.handle}`;
-          fragment.appendChild(head);
+          fragment.appendChild(buildAccountHead(account));
         }
 
         minutes.forEach((minute, index) => {
@@ -1100,6 +1187,58 @@
         renderComposeTargets();
         renderAuthStatus();
         updateComposerState();
+      }
+
+      function buildAccountHead(account) {
+        const head = document.createElement("div");
+        head.className = "account-head";
+        head.title = `${account.displayName} / ${account.provider}: ${account.handle}`;
+
+        const avatar = document.createElement("span");
+        avatar.className = "account-avatar";
+        avatar.style.background = avatarColor(account.handle || account.id);
+        avatar.textContent = (account.displayName || account.handle || "?")
+          .trim()
+          .charAt(0)
+          .toUpperCase();
+
+        const name = document.createElement("span");
+        name.className = "account-head-name";
+        name.textContent = account.displayName;
+
+        head.append(avatar, name);
+
+        if (!account.mine) {
+          const actions = document.createElement("span");
+          actions.className = "account-head-actions";
+
+          const editButton = document.createElement("button");
+          editButton.type = "button";
+          editButton.className = "account-head-btn";
+          editButton.textContent = "✎";
+          editButton.setAttribute("aria-label", `${account.displayName}を編集`);
+          editButton.addEventListener("click", (event) => {
+            event.stopPropagation();
+            openAccountDialog(account);
+          });
+
+          const removeButton = document.createElement("button");
+          removeButton.type = "button";
+          removeButton.className = "account-head-btn danger";
+          removeButton.textContent = "×";
+          removeButton.setAttribute("aria-label", `${account.displayName}を削除`);
+          removeButton.addEventListener("click", (event) => {
+            event.stopPropagation();
+            if (confirm(`${account.displayName} を削除しますか？`)) {
+              removeAccount(account.id);
+            }
+          });
+
+          actions.append(editButton, removeButton);
+          head.appendChild(actions);
+        }
+
+        return head;
       }
 
       function renderPosts(slot, posts, account) {
@@ -1308,6 +1447,69 @@
         els.composeText.placeholder = state.session
           ? "いま投稿する内容"
           : "Bluesky認証後に投稿できます";
+      }
+
+      function openAccountDialog(account) {
+        editingAccountId = account ? account.id : null;
+        els.accountDialogTitle.textContent = account
+          ? "アカウントを編集"
+          : "表示アカウントを追加";
+        els.accountName.value = account?.displayName || "";
+        els.accountHandle.value = account?.handle || "";
+        els.accountProvider.value = account?.provider || "bluesky";
+        els.saveAccount.textContent = account ? "保存" : "追加";
+        els.deleteAccountButton.hidden = !account;
+        els.dialog.showModal();
+        els.accountName.focus();
+      }
+
+      async function updateAccount(accountId, { displayName, handle, provider }) {
+        const account = state.accounts.find((item) => item.id === accountId);
+        if (!account) return;
+
+        const cleanHandle = normalizeHandle(handle);
+        if (!cleanHandle) return;
+
+        const handleChanged = cleanHandle !== normalizeHandle(account.handle || "");
+        if (handleChanged) {
+          state.posts = state.posts.filter((post) => post.accountId !== accountId);
+          delete state.feedCursors[accountId];
+        }
+
+        if (provider === "bluesky") {
+          const profile = await getBlueskyProfile(cleanHandle);
+          Object.assign(account, {
+            provider,
+            handle: profile.handle || cleanHandle,
+            did: profile.did || "",
+            displayName: displayName || profile.displayName || profile.handle || cleanHandle,
+            demo: false,
+          });
+          persistState();
+          render();
+          await loadAccountFeed(account, { resetCursor: true });
+          render();
+          return;
+        }
+
+        Object.assign(account, {
+          provider,
+          handle: cleanHandle,
+          did: "",
+          displayName: displayName || cleanHandle,
+          demo: false,
+          disabledReason: "X API key is required",
+        });
+        persistState();
+        render();
+      }
+
+      function removeAccount(accountId) {
+        state.accounts = state.accounts.filter((account) => account.id !== accountId);
+        state.posts = state.posts.filter((post) => post.accountId !== accountId);
+        delete state.feedCursors[accountId];
+        persistState();
+        render();
       }
 
       async function addAccount({ displayName, handle, provider }) {
@@ -1743,6 +1945,12 @@
           .trim()
           .replace(/^@/, "")
           .toLowerCase();
+      }
+
+      function avatarColor(seed) {
+        let hash = 0;
+        for (const char of String(seed)) hash = (hash * 31 + char.charCodeAt(0)) >>> 0;
+        return AVATAR_PALETTE[hash % AVATAR_PALETTE.length];
       }
 
       function buildPostUrl(account, uri) {
