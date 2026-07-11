@@ -7,24 +7,24 @@
     <style>
       :root {
         color-scheme: light;
-        --bg: #eef0f4;
+        --bg: #f5f8fa;
         --paper: #ffffff;
-        --ink: #14161c;
-        --muted: #6b7280;
-        --line: #e2e5eb;
-        --line-strong: #d8dce3;
-        --header: #1c1f2a;
-        --header-line: #383c4a;
-        --post: #dbe7fb;
-        --post-strong: #4f7cc2;
-        --accent: #0f8f72;
-        --accent-soft: #e6f5f0;
-        --danger: #c23a3a;
-        --composer: #f3f5f8;
+        --ink: #14171a;
+        --muted: #657786;
+        --line: #e1e8ed;
+        --line-strong: #aab8c2;
+        --header: #1da1f2;
+        --header-line: #55b8f4;
+        --post: #e8f5fd;
+        --post-strong: #1da1f2;
+        --accent: #17bf63;
+        --accent-soft: #e6f7ef;
+        --danger: #e0245e;
+        --composer: #f5f8fa;
         --radius: 14px;
         --radius-sm: 8px;
-        --shadow-card: 0 1px 2px rgba(20, 22, 28, 0.04), 0 12px 28px rgba(20, 22, 28, 0.06);
-        --shadow: 0 -12px 28px rgba(20, 22, 28, 0.05);
+        --shadow-card: 0 1px 2px rgba(20, 23, 26, 0.04), 0 12px 28px rgba(20, 23, 26, 0.06);
+        --shadow: 0 -12px 28px rgba(20, 23, 26, 0.05);
         --time-col: 72px;
         --row-h: 40px;
         --head-h: 34px;
@@ -75,7 +75,7 @@
         padding: 14px 18px 12px;
         background: var(--paper);
         border-bottom: 1px solid var(--line);
-        box-shadow: 0 1px 0 rgba(20, 22, 28, 0.02);
+        box-shadow: 0 1px 0 rgba(20, 23, 26, 0.02);
       }
 
       .brand {
@@ -136,7 +136,7 @@
       .load-button:hover,
       .dialog-button:hover {
         border-color: var(--post-strong);
-        box-shadow: 0 4px 10px rgba(20, 22, 28, 0.08);
+        box-shadow: 0 4px 10px rgba(20, 23, 26, 0.08);
       }
 
       .tool-button:active,
@@ -154,7 +154,7 @@
 
       .tool-button.primary:hover {
         border-color: var(--header);
-        box-shadow: 0 4px 12px rgba(28, 31, 42, 0.25);
+        box-shadow: 0 4px 12px rgba(29, 161, 242, 0.35);
       }
 
       .auth-button {
@@ -182,8 +182,8 @@
         padding: 10px 14px;
         border: 1px dashed var(--post-strong);
         border-radius: var(--radius-sm);
-        background: var(--accent-soft);
-        color: #0c604e;
+        background: var(--post);
+        color: #0c5a94;
         font-size: 13px;
         line-height: 1.5;
       }
@@ -369,7 +369,7 @@
       }
 
       .post-card.mine {
-        background: #cfe3d9;
+        background: var(--accent-soft);
         border-left-color: var(--accent);
       }
 
@@ -393,8 +393,8 @@
         display: flex;
         align-items: center;
         color: var(--muted);
-        background: #e7ebf1;
-        border-left: 3px solid #b7bfca;
+        background: var(--line);
+        border-left: 3px solid var(--line-strong);
         border-radius: 0 4px 4px 0;
         font-size: 11px;
         white-space: nowrap;
@@ -417,7 +417,7 @@
         border: 1px solid var(--line);
         border-radius: var(--radius);
         background: #fff;
-        box-shadow: 0 16px 38px rgba(20, 22, 28, 0.18);
+        box-shadow: 0 16px 38px rgba(20, 23, 26, 0.18);
       }
 
       .post-popover.is-open {
@@ -600,7 +600,7 @@
         padding: 0;
         background: #fff;
         color: var(--ink);
-        box-shadow: 0 24px 60px rgba(20, 22, 28, 0.28);
+        box-shadow: 0 24px 60px rgba(20, 23, 26, 0.28);
       }
 
       dialog::backdrop {
