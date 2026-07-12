@@ -107,6 +107,7 @@
 
       .tool-button,
       .auth-button,
+      .mode-button,
       .submit-button,
       .load-button,
       .dialog-button {
@@ -132,6 +133,7 @@
       }
 
       .tool-button:hover,
+      .mode-button:hover,
       .submit-button:hover:not(:disabled),
       .load-button:hover,
       .dialog-button:hover {
@@ -140,6 +142,7 @@
       }
 
       .tool-button:active,
+      .mode-button:active,
       .submit-button:active:not(:disabled),
       .load-button:active,
       .dialog-button:active {
@@ -164,6 +167,21 @@
         font-size: 12px;
         font-weight: 700;
         white-space: nowrap;
+      }
+
+      .mode-button {
+        min-width: 74px;
+        height: 34px;
+        padding: 0 10px;
+        font-size: 12px;
+        font-weight: 700;
+        white-space: nowrap;
+      }
+
+      .mode-button.active {
+        border-color: var(--header);
+        background: var(--header);
+        color: #fff;
       }
 
       .auth-button.signed-in {
@@ -761,6 +779,15 @@
             ↻
           </button>
           <button
+            class="mode-button"
+            id="sortModeButton"
+            type="button"
+            title="投稿が新しいアカウントを左に並べ替え"
+            aria-pressed="false"
+          >
+            登録順
+          </button>
+          <button
             class="auth-button"
             id="authButton"
             type="button"
@@ -961,6 +988,7 @@
         lastSyncedAt: "",
         syncMessage: "",
         isLoading: false,
+        sortMode: "manual",
       };
 
       const els = {
@@ -972,6 +1000,7 @@
         windowLabel: document.getElementById("windowLabel"),
         jumpNow: document.getElementById("jumpNow"),
         refreshNow: document.getElementById("refreshNow"),
+        sortModeButton: document.getElementById("sortModeButton"),
         authButton: document.getElementById("authButton"),
         authDialog: document.getElementById("authDialog"),
         authForm: document.getElementById("authForm"),
@@ -1029,6 +1058,11 @@
         els.refreshNow.addEventListener("click", async () => {
           await loadLatestPosts({ silent: false });
           els.scroll.scrollTop = 0;
+        });
+
+        els.sortModeButton.addEventListener("click", () => {
+          state.sortMode = state.sortMode === "recent" ? "manual" : "recent";
+          render();
         });
 
         els.authButton.addEventListener("click", () => {
@@ -1154,13 +1188,14 @@
 
       function render() {
         const minutes = buildMinutes(state.now, state.windowMinutes);
+        const orderedAccounts = getOrderedAccounts();
         els.grid.style.setProperty("--account-count", state.accounts.length);
 
         const postsByMinuteAndAccount = groupPosts(minutes);
         const fragment = document.createDocumentFragment();
 
         fragment.appendChild(cell("corner", ""));
-        for (const account of state.accounts) {
+        for (const account of orderedAccounts) {
           fragment.appendChild(buildAccountHead(account));
         }
 
@@ -1170,7 +1205,7 @@
           const time = cell(`time-cell${isCurrent ? " current" : ""}`, formatTime(minute));
           fragment.appendChild(time);
 
-          for (const account of state.accounts) {
+          for (const account of orderedAccounts) {
             const slot = cell(`slot${isCurrent ? " current" : ""}`, "");
             const posts =
               postsByMinuteAndAccount.get(`${minuteKey}:${account.id}`) || [];
@@ -1186,7 +1221,34 @@
         )} まで / ${state.windowMinutes}分${state.syncMessage ? ` / ${state.syncMessage}` : ""}`;
         renderComposeTargets();
         renderAuthStatus();
+        renderSortModeButton();
         updateComposerState();
+      }
+
+      function getOrderedAccounts() {
+        if (state.sortMode !== "recent") return state.accounts;
+
+        const latestByAccount = new Map();
+        for (const post of state.posts) {
+          const time = post.createdAt.getTime();
+          const current = latestByAccount.get(post.accountId);
+          if (current === undefined || time > current) {
+            latestByAccount.set(post.accountId, time);
+          }
+        }
+
+        return [...state.accounts].sort((a, b) => {
+          const aTime = latestByAccount.get(a.id) ?? -Infinity;
+          const bTime = latestByAccount.get(b.id) ?? -Infinity;
+          return bTime - aTime;
+        });
+      }
+
+      function renderSortModeButton() {
+        const isRecent = state.sortMode === "recent";
+        els.sortModeButton.textContent = isRecent ? "新着順" : "登録順";
+        els.sortModeButton.classList.toggle("active", isRecent);
+        els.sortModeButton.setAttribute("aria-pressed", isRecent ? "true" : "false");
       }
 
       function buildAccountHead(account) {
