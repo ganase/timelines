@@ -1,26 +1,46 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
   <title id="title">Timelines whale icon</title>
-  <desc id="desc">Original white whale icon on Twitter blue background for the Timelines app.</desc>
+  <desc id="desc">Original white whale app icon on Twitter blue background for the Timelines app.</desc>
   <rect width="512" height="512" rx="112" fill="#1DA1F2"/>
+
   <path
     fill="#fff"
-    d="M96 284c0-64 59-115 137-115 59 0 107 24 139 64 24-8 50-27 77-55 9-9 25-2 24 11-2 27-18 52-42 67 26 13 42 36 45 63 2 14-14 23-26 15-31-21-58-34-84-36-31 45-82 73-141 73-74 0-129-36-129-87Z"
+    opacity=".28"
+    d="M121 389c14-16 28-16 42 0s28 16 42 0 28-16 42 0 28 16 42 0 28-16 42 0 28 16 42 0 28-16 42 0 28 16 42 0v35H79v-35c14 16 28 16 42 0Z"
   />
   <path
-    fill="#1DA1F2"
-    d="M169 246a9 9 0 1 0 0-18 9 9 0 0 0 0 18Z"
-  />
-  <path
-    fill="#1DA1F2"
-    d="M151 306c26 24 65 38 108 38 41 0 78-13 104-36 5-4 6-11 2-16s-12-5-17-1c-22 19-54 30-89 30-37 0-70-12-92-32-5-4-12-4-16 1s-4 12 0 16Z"
-  />
-  <path
-    fill="#1DA1F2"
-    d="M215 281c32 12 75 12 107-1 6-2 9-9 7-15s-9-9-15-7c-27 10-62 10-91 0-6-2-13 1-15 7-2 7 1 14 7 16Z"
+    fill="none"
+    stroke="#fff"
+    stroke-linecap="round"
+    stroke-width="3"
+    opacity=".7"
+    d="M164 263c-11-46-9-92 7-137M227 252c-6-52 2-99 25-141M292 261c8-49 25-91 52-126M354 291c27-29 52-60 74-94"
   />
   <path
     fill="#fff"
-    d="M111 223c14-33 43-57 83-66 9-2 17 5 16 14-1 8-7 14-15 16-28 7-49 24-60 49-4 9-15 12-22 6-5-5-6-12-2-19Z"
-    opacity=".92"
+    d="M82 307c4-67 63-116 146-119 66-2 116 20 153 64 10 12 19 26 25 41 16-11 30-27 40-49 5-11 20-10 24 2 8 25 2 51-18 74 24 2 46 14 62 35 8 10 0 25-13 24-31-3-60-15-87-35-14 17-35 30-62 39-36 13-82 17-132 10-68-9-121-39-138-86Z"
+  />
+  <path
+    fill="#1DA1F2"
+    d="M159 285a8 8 0 1 0 0-16 8 8 0 0 0 0 16Z"
+  />
+  <path
+    fill="none"
+    stroke="#1DA1F2"
+    stroke-linecap="round"
+    stroke-width="9"
+    d="M112 321c56 35 133 55 226 42"
+  />
+  <path
+    fill="none"
+    stroke="#1DA1F2"
+    stroke-linecap="round"
+    stroke-width="5"
+    opacity=".78"
+    d="M231 369c18-18 27-46 28-83M274 372c18-20 28-47 31-82M318 368c14-18 22-40 24-66"
+  />
+  <path
+    fill="#fff"
+    d="M155 118a9 9 0 1 0 0-18 9 9 0 0 0 0 18ZM248 105a10 10 0 1 0 0-20 10 10 0 0 0 0 20ZM351 130a9 9 0 1 0 0-18 9 9 0 0 0 0 18ZM435 192a8 8 0 1 0 0-16 8 8 0 0 0 0 16Z"
   />
 </svg>
